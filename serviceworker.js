@@ -40,70 +40,62 @@ var urlsToCache = [
     '/vendor/select2/select2.min.js'
 ];
 
-// install cache on browser
-self.addEventListener('install', function(event){
-    //do install
+self.addEventListener('install', function (event) {
     event.waitUntil(
         caches.open(CACHE_NAME).then(
-            function(cache){
-                //cek apakah cache sudah terinstall
-                console.log("service worker do install . .");
-                return cache.addAll(urlToCache);
-            }
+            function (cache) {
+                console.log('service worker do install..',cache);
+                return cache.addAll(urlsToCache);
+            },
+            // function (err) {
+            //     console.log('err : ' , err);
+            // }
         )
-    );
-    self.skipWaiting();
+    )
 });
 
-self.addEventListener('activate', function(event){
+self.addEventListener('activate', function(event) {
     event.waitUntil(
-        caches.keys().then(function(cacheName){
+        caches.keys().then(function(cacheNames){
             return Promise.all(
-                //jika sudah ada cache dengan versi beda maka di hapus
-                cacheName.filter(function(cacheName){
-                    return cacheName !== CACHE_NAME;
-                }).map(function(cacheName){
-                    return caches.delete(cacheName);
-                })
-            );
-        })
+            // delete cache jika ada versi lebih baru
+            cacheNames.filter(function(cacheName){
+                return cacheName !== CACHE_NAME;
+            }).map (function(cacheName){
+                return caches.delete(cacheName);
+            })
+        );
+    })
     );
-    if(self.clients && clients.claim){
-        clients.claim();
-    }
 });
 
-//fetch cache
+// Fetch cache 
 self.addEventListener('fetch', function(event){
     var request = event.request;
-    var url = new URL(request.url);
+    var url = new URL (request.url);
 
-    /**
-     * menggunakan data local cache
-     */
-
-     if(url.origin === location.origin){
-         event.respondWith(
-             caches.match(request).then(function(response){
-                 //jika ada data di caache, maka tampilkan data cache, jika tidak maka petch request
-                 return response || fetch(request);
-             })
-         )
-     }else{
-         //internet API
-         event.respondWith(
-             caches.open('mahasiswa-cache-v1').then(function(cache){
-                 return fetch(request).then(function(liveRequest){
-                     cache.put(request, liveRequest.clone());
-                     //save cache to mahasiswa-cache-v1
-                     return liveRequest;
-                 }).catch(function(){
-                     return caches.match(request).then(function(response){
-                         if(response) return response;
-                         return caches.match('/fallback.json');
-                     })
-                 })
-             })
-         )
-     }
-});
+    // Memisahkan cache file dgn cache data API
+    if (url.origin === location.origin){
+        event.respondWith (
+            caches.match(request).then(function(response){
+                return response || fetch (request);
+            })
+        )
+    } else {
+        event.respondWith (
+            caches.open('list-mahasiswa-cache-v1')
+            .then(function(cache){
+                return fetch (request).then(function(liveRequest){
+                    cache.put(request, liveRequest.clone());
+                    return liveRequest;
+                }).catch (function(){
+                    return caches.match(request)
+                    .then(function(response){
+                        if(response) return response;
+                        return caches.match('/fallback.json');
+                    })
+                })
+            })
+        )
+    }
+})
