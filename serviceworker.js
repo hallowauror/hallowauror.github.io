@@ -1,4 +1,4 @@
-var CACHE_NAME = 'my-pwa-cache-v1';
+var CACHE_NAME = 'latihan-pwa-cache-v1';
 
 var urlsToCache = [
     '/',
